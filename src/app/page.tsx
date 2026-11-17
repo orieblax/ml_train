@@ -155,7 +155,7 @@ export default function HomePage() {
                 Connect your AWS Free-Tier Backend
               </h2>
               <p className="text-sm text-zinc-600">
-                Run the one-time CloudFormation bootstrap script to provision S3,
+                Deploy the Serverless Framework stack to provision S3,
                 Always-Free DynamoDB, the Shared ML Layer, and the Trainer Lambda.
               </p>
             </div>
@@ -164,18 +164,19 @@ export default function HomePage() {
               className="inline-flex items-center gap-2 rounded-lg bg-[#0f766e] hover:bg-[#115e59] text-white px-4 py-2 text-sm font-medium transition-colors shrink-0"
             >
               <Terminal className="h-4 w-4" />
-              <span>Open Diagnostics & Setup</span>
+              <span>Open Diagnostics &amp; Setup</span>
             </Link>
           </div>
 
           <div className="rounded-lg border border-zinc-200 bg-zinc-950 text-zinc-100 p-4 font-mono text-xs overflow-x-auto space-y-1.5">
             <div className="text-zinc-400">
-              # 1. Build Python 3.12 ML Layer (&lt; 235 MB unzipped) &amp; deploy CloudFormation stack
+              # 1. Build Python 3.12 ML Layer (&lt; 235 MB unzipped) &amp; deploy via Serverless (`test_local` profile)
             </div>
-            <div>python3 infra/scripts/deploy.py --region us-east-1 --create-access-key</div>
+            <div>npm run sls:deploy:local</div>
             <div className="text-zinc-400 pt-2">
-              # 2. Paste the printed variables into .env.local (local) or Vercel Project Settings
+              # 2. Export env vars into .env.local &amp; paste into Vercel Project Settings
             </div>
+            <div>npm run sls:env:local -- --out .env.local</div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">

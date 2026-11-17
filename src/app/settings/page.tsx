@@ -50,7 +50,7 @@ export default function SettingsPage() {
   }, []);
 
   const bootstrapCmd =
-    "python3 infra/scripts/deploy.py --region us-east-1 --create-access-key";
+    "npm run sls:deploy:local && npm run sls:env:local -- --out .env.local";
 
   async function copyBootstrap() {
     await navigator.clipboard.writeText(bootstrapCmd);
@@ -137,15 +137,19 @@ export default function SettingsPage() {
 
       <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs space-y-4">
         <h2 className="text-base font-semibold text-zinc-950">
-          One-Command AWS Free-Tier Bootstrap
+          Serverless Framework AWS Bootstrap
         </h2>
         <p className="text-sm text-zinc-600">
-          Run this script locally with your AWS CLI credentials to build the
+          Run this command locally with your AWS credentials to build the
           Python 3.12 ML Layer (&lt; 235 MB unzipped), deploy{" "}
           <code className="font-mono text-xs bg-zinc-100 px-1.5 py-0.5 rounded">
-            infra/cloudformation.yaml
+            serverless.yml
           </code>
-          , and generate scoped Vercel environment variables.
+          , and print scoped Vercel environment variables (see{" "}
+          <code className="font-mono text-xs bg-zinc-100 px-1.5 py-0.5 rounded">
+            DEPLOY_GUIDE.md
+          </code>
+          ).
         </p>
 
         <div className="flex items-center justify-between gap-3 rounded-lg bg-zinc-950 text-zinc-100 px-4 py-3 font-mono text-xs">

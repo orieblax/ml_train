@@ -49,3 +49,4 @@ next-env.d.ts
 .pytest_cache/
 infra/.build/
 infra/dist/
+.serverless/

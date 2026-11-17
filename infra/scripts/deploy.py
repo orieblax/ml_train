@@ -9,16 +9,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-import boto3
-from botocore.exceptions import ClientError
-
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 INFRA_DIR = ROOT_DIR / "infra"
 TEMPLATE_PATH = INFRA_DIR / "cloudformation.yaml"
-BUILD_SCRIPT = INFRA_DIR / "scripts" / "build_layer.sh"
 
 
-def ensure_artifacts_bucket(s3: any, bucket_name: str, region: str) -> None:
+def ensure_artifacts_bucket(
+    s3: any, ClientError: type[Exception], bucket_name: str, region: str
+) -> None:
     try:
         s3.head_bucket(Bucket=bucket_name)
         print(f"==> Reusing bootstrap artifacts bucket: s3://{bucket_name}")
@@ -41,6 +39,7 @@ def ensure_artifacts_bucket(s3: any, bucket_name: str, region: str) -> None:
 
 def deploy_stack(
     cfn: any,
+    ClientError: type[Exception],
     stack_name: str,
     template_body: str,
     params: dict[str, str],
@@ -85,7 +84,8 @@ def deploy_stack(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Deploy ml_train AWS backend stack")
-    parser.add_argument("--region", default=os.environ.get("AWS_REGION", "us-east-1"))
+    parser.add_argument("--profile", default=os.environ.get("AWS_PROFILE"))
+    parser.add_argument("--region", default=os.environ.get("AWS_REGION"))
     parser.add_argument("--prefix", default="mltrain")
     parser.add_argument("--stack-name", default="mltrain-studio")
     parser.add_argument("--cors-origin", default="*")
@@ -101,15 +101,27 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    try:
+        import boto3
+        from botocore.exceptions import ClientError
+    except ImportError as exc:
+        raise SystemExit(
+            "Missing Python dependency 'boto3'. Install it with:\n  pip install boto3\n"
+        ) from exc
+
     if not args.skip_build:
-        subprocess.run(["bash", str(BUILD_SCRIPT)], check=True)
+        pkg_script = INFRA_DIR / "scripts" / "package_lambdas.py"
+        subprocess.run([sys.executable, str(pkg_script)], check=True)
 
-    sts = boto3.client("sts", region_name=args.region)
+    session = boto3.Session(profile_name=args.profile) if args.profile else boto3.Session()
+    region = args.region or session.region_name or "us-east-1"
+
+    sts = session.client("sts", region_name=region)
     account_id = sts.get_caller_identity()["Account"]
-    artifacts_bucket = f"{args.prefix}-bootstrap-{account_id}-{args.region}"
+    artifacts_bucket = f"{args.prefix}-bootstrap-{account_id}-{region}"
 
-    s3 = boto3.client("s3", region_name=args.region)
-    ensure_artifacts_bucket(s3, artifacts_bucket, args.region)
+    s3 = session.client("s3", region_name=region)
+    ensure_artifacts_bucket(s3, ClientError, artifacts_bucket, region)
 
     layer_zip = INFRA_DIR / "dist" / "ml-runtime-layer.zip"
     trainer_zip = INFRA_DIR / "dist" / "trainer-lambda.zip"
@@ -121,9 +133,10 @@ def main() -> None:
     print(f"==> Uploading {trainer_zip.name} to s3://{artifacts_bucket}/{trainer_key}")
     s3.upload_file(str(trainer_zip), artifacts_bucket, trainer_key)
 
-    cfn = boto3.client("cloudformation", region_name=args.region)
+    cfn = session.client("cloudformation", region_name=region)
     outputs = deploy_stack(
         cfn,
+        ClientError,
         args.stack_name,
         TEMPLATE_PATH.read_text(encoding="utf-8"),
         {
@@ -138,7 +151,7 @@ def main() -> None:
     access_key_id = "<YOUR_IAM_ACCESS_KEY_ID>"
     secret_key = "<YOUR_IAM_SECRET_ACCESS_KEY>"
     if args.create_access_key:
-        iam = boto3.client("iam", region_name=args.region)
+        iam = session.client("iam", region_name=region)
         key_resp = iam.create_access_key(UserName=outputs["VercelAppUserName"])
         access_key_id = key_resp["AccessKey"]["AccessKeyId"]
         secret_key = key_resp["AccessKey"]["SecretAccessKey"]
@@ -146,7 +159,7 @@ def main() -> None:
     print("\n" + "=" * 64)
     print("AWS Stack Ready! Add these environment variables to .env.local & Vercel:")
     print("=" * 64)
-    print(f"AWS_REGION={args.region}")
+    print(f"AWS_REGION={region}")
     print(f"AWS_ACCESS_KEY_ID={access_key_id}")
     print(f"AWS_SECRET_ACCESS_KEY={secret_key}")
     print(f"MLTRAIN_S3_BUCKET={outputs['S3BucketName']}")

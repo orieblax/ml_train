@@ -8,7 +8,14 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "sls:build": "node infra/scripts/run-python.mjs infra/scripts/package_lambdas.py",
+    "sls:package": "npx --yes serverless@3 package --stage prod",
+    "sls:deploy": "npm run sls:build && npx --yes serverless@3 deploy --stage prod",
+    "sls:deploy:local": "npm run sls:build && node infra/scripts/sls-with-profile.mjs deploy --profile test_local --stage prod",
+    "sls:env:local": "node infra/scripts/run-python.mjs infra/scripts/print-env.py --stage prod --profile test_local --create-access-key",
+    "sls:remove": "npx --yes serverless@3 remove --stage prod",
+    "sls:remove:local": "node infra/scripts/sls-with-profile.mjs remove --profile test_local --stage prod"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1169.0",

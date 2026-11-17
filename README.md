@@ -19,20 +19,38 @@ Train text classification, multi-label tagging, and sentiment ML models from you
 
 ---
 
-## 1. Provision the AWS Backend (One-Time Setup)
+## 1. Provision the AWS Backend
 
-Ensure you have AWS credentials configured (`aws configure` or `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) and Python 3.11+ with `boto3` and `zip` installed:
+See **[DEPLOY_GUIDE.md](./DEPLOY_GUIDE.md)** for the full step-by-step walkthrough.
+
+### Option A: Serverless Framework (Recommended — preconfigured for AWS profile `test_local`)
+
+Ensure you have Node.js 20+, Python 3.11+ with `boto3` (`pip install boto3`), and your AWS CLI profile ready (`aws sts get-caller-identity --profile test_local`):
 
 ```bash
-chmod +x infra/scripts/build_layer.sh infra/scripts/deploy.py
-python3 infra/scripts/deploy.py --region us-east-1 --create-access-key
+npm install
+npm run sls:deploy:local
+npm run sls:env:local -- --out .env.local
 ```
 
-This script:
-1. Builds the Python 3.12 `manylinux2014_x86_64` Shared ML Layer and verifies it fits comfortably under AWS Lambda's 250 MB unzipped limit.
-2. Packages `lambdas/trainer` + `lambdas/shared`.
-3. Deploys [`infra/cloudformation.yaml`](infra/cloudformation.yaml).
-4. Prints the exact environment variables to add to `.env.local` and your Vercel Project Settings.
+Or pass explicit flags if using another profile or region:
+
+```bash
+npx --yes serverless@3 deploy --stage prod --aws-profile test_local --region us-east-1
+python3 infra/scripts/print-env.py --stage prod --profile test_local --create-access-key
+```
+
+### Option B: Standalone CloudFormation + Python Bootstrap
+
+```bash
+python3 infra/scripts/deploy.py --profile test_local --region us-east-1 --create-access-key
+```
+
+Both methods:
+1. Build the Python 3.12 `manylinux2014_x86_64` Shared ML Layer (~194 MB unzipped, safely under AWS Lambda's 250 MB limit).
+2. Package `lambdas/trainer` + `lambdas/shared`.
+3. Provision S3, Always-Free DynamoDB (`10 RCU / 10 WCU`), Shared ML Layer, Trainer Lambda, and scoped IAM roles.
+4. Print the exact environment variables to add to `.env.local` and Vercel Project Settings.
 
 ---
 
