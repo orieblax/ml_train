@@ -89,5 +89,5 @@ bash infra/scripts/build_layer.sh --check-only
 ## 4. Deploy to Vercel
 
 1. Push this repository to GitHub and import it in **Vercel** (root directory = `./`).
-2. Add the environment variables from `deploy.py` (plus a 32-char `MLTRAIN_SESSION_SECRET` and optional `APP_ACCESS_PIN`) in **Vercel → Settings → Environment Variables**.
+2. Add the environment variables from `print-env.py` / `deploy.py` (including `MLTRAIN_SESSION_SECRET`, `APP_USERNAME`, and `APP_PASSWORD`) in **Vercel → Settings → Environment Variables**.
 3. Deploy! `next.config.ts` traces `lambdas/inference/handler.py` automatically via `outputFileTracingIncludes`.

@@ -168,7 +168,8 @@ def main() -> None:
     print(f"MLTRAIN_ML_LAYER_ARN={outputs['MLLayerArn']}")
     print(f"MLTRAIN_INFERENCE_ROLE_ARN={outputs['InferenceRoleArn']}")
     print("MLTRAIN_SESSION_SECRET=<generate-32-char-random-secret>")
-    print("APP_ACCESS_PIN=<optional-workspace-passcode>")
+    print("APP_USERNAME=admin")
+    print("APP_PASSWORD=<set-your-login-password>")
     print("=" * 64)
 
 

@@ -131,7 +131,8 @@ def main() -> None:
         f"MLTRAIN_ML_LAYER_ARN={outputs['MLLayerArn']}",
         f"MLTRAIN_INFERENCE_ROLE_ARN={outputs['InferenceRoleArn']}",
         f"MLTRAIN_SESSION_SECRET={session_secret}",
-        "APP_ACCESS_PIN=",
+        "APP_USERNAME=admin",
+        "APP_PASSWORD=<set-your-login-password>",
     ]
     env_block = "\n".join(lines) + "\n"
 

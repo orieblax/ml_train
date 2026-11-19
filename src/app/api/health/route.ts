@@ -2,6 +2,7 @@ import { DescribeTableCommand } from "@aws-sdk/client-dynamodb";
 import { GetFunctionCommand, GetLayerVersionCommand } from "@aws-sdk/client-lambda";
 import { HeadBucketCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
+import { requireWorkspaceAuth } from "@/lib/auth";
 import { getAwsClients } from "@/lib/aws/clients";
 import { getAwsEnv, getEnvMissingKeys, isAwsConfigured } from "@/lib/env";
 import type { DiagnosticCheck } from "@/lib/types";
@@ -16,6 +17,9 @@ function parseLayerArn(arn: string): { layerName: string; version: number } | nu
 }
 
 export async function GET() {
+  const authErr = await requireWorkspaceAuth();
+  if (authErr) return authErr;
+
   const missingKeys = getEnvMissingKeys();
   if (!isAwsConfigured()) {
     return NextResponse.json({

@@ -1,9 +1,17 @@
 "use client";
 
-import { Activity, Cpu, FolderKanban, Lock, Settings } from "lucide-react";
+import {
+  Activity,
+  Cpu,
+  FolderKanban,
+  LogOut,
+  Settings,
+  User,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useWorkspaceAuth } from "@/components/AuthGate";
 
 interface HealthSummary {
   configured: boolean;
@@ -13,22 +21,15 @@ interface HealthSummary {
 
 export function AppHeader() {
   const pathname = usePathname();
+  const { authRequired, username, signOut } = useWorkspaceAuth();
   const [health, setHealth] = useState<HealthSummary | null>(null);
-  const [pinRequired, setPinRequired] = useState(false);
 
   useEffect(() => {
     let active = true;
     fetch("/api/health", { cache: "no-store" })
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (active) setHealth(data);
-      })
-      .catch(() => null);
-
-    fetch("/api/auth", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => {
-        if (active) setPinRequired(Boolean(data?.pinRequired));
+        if (active && data) setHealth(data);
       })
       .catch(() => null);
 
@@ -37,15 +38,25 @@ export function AppHeader() {
     };
   }, []);
 
-  async function handleLock() {
-    await fetch("/api/auth", { method: "DELETE" });
-    window.location.reload();
-  }
-
   const navItems = [
-    { href: "/", label: "Projects", icon: FolderKanban, match: (p: string) => p === "/" || p.startsWith("/projects") },
-    { href: "/deployments", label: "Deployments", icon: Cpu, match: (p: string) => p.startsWith("/deployments") },
-    { href: "/settings", label: "AWS Setup", icon: Settings, match: (p: string) => p.startsWith("/settings") },
+    {
+      href: "/",
+      label: "Projects",
+      icon: FolderKanban,
+      match: (p: string) => p === "/" || p.startsWith("/projects"),
+    },
+    {
+      href: "/deployments",
+      label: "Deployments",
+      icon: Cpu,
+      match: (p: string) => p.startsWith("/deployments"),
+    },
+    {
+      href: "/settings",
+      label: "AWS Setup",
+      icon: Settings,
+      match: (p: string) => p.startsWith("/settings"),
+    },
   ];
 
   return (
@@ -88,7 +99,7 @@ export function AppHeader() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <Link
             href="/settings"
             className="hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-md border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 transition-colors text-xs text-zinc-700"
@@ -115,16 +126,25 @@ export function AppHeader() {
             </span>
           </Link>
 
-          {pinRequired && (
-            <button
-              type="button"
-              onClick={handleLock}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-zinc-200 text-xs font-medium text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 transition-colors cursor-pointer"
-              title="Lock workspace"
-            >
-              <Lock className="h-3.5 w-3.5" />
-              <span>Lock</span>
-            </button>
+          {authRequired && (
+            <div className="flex items-center gap-2">
+              {username && (
+                <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 text-xs font-medium text-zinc-700">
+                  <User className="h-3.5 w-3.5 text-zinc-500" />
+                  <span className="max-w-28 truncate">{username}</span>
+                </span>
+              )}
+              <button
+                id="btn-sign-out"
+                type="button"
+                onClick={signOut}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-zinc-200 text-xs font-medium text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 transition-colors cursor-pointer"
+                title="Sign out"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Sign Out</span>
+              </button>
+            </div>
           )}
         </div>
       </div>

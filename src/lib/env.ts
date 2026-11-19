@@ -63,7 +63,36 @@ export function getSessionSecret(): string {
   return `mltrain-fallback-secret:${accessKey}`;
 }
 
-export function getAccessPin(): string | null {
-  const pin = process.env.APP_ACCESS_PIN?.trim();
-  return pin && pin.length > 0 ? pin : null;
+export interface WorkspaceAuthConfig {
+  authRequired: boolean;
+  configured: boolean;
+  username: string | null;
+  password: string | null;
+}
+
+export function getAuthConfig(): WorkspaceAuthConfig {
+  const disabled =
+    process.env.APP_AUTH_DISABLED?.trim().toLowerCase() === "true";
+  const rawUser =
+    process.env.APP_USERNAME?.trim() ||
+    process.env.MLTRAIN_USERNAME?.trim() ||
+    process.env.AUTH_USERNAME?.trim() ||
+    "";
+  const rawPass =
+    process.env.APP_PASSWORD?.trim() ||
+    process.env.MLTRAIN_PASSWORD?.trim() ||
+    process.env.AUTH_PASSWORD?.trim() ||
+    "";
+  const legacyPin = process.env.APP_ACCESS_PIN?.trim() || "";
+
+  const username = rawUser || (legacyPin ? "admin" : null);
+  const password = rawPass || (legacyPin ? legacyPin : null);
+  const configured = Boolean(username && password);
+
+  return {
+    authRequired: !disabled,
+    configured,
+    username: configured ? username : null,
+    password: configured ? password : null,
+  };
 }

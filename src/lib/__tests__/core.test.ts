@@ -1,5 +1,11 @@
 import { unzipSync } from "fflate";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  createSessionCookieValue,
+  isSessionTokenValid,
+  parseSessionToken,
+  verifyWorkspaceCredentials,
+} from "@/lib/auth";
 import {
   buildInferenceZipBytes,
   buildModelFunctionName,
@@ -16,6 +22,7 @@ import {
   verifySignedToken,
 } from "@/lib/crypto";
 import { computeDatasetReadiness } from "@/lib/dataset-utils";
+import { getAuthConfig } from "@/lib/env";
 import type { DocumentRecord } from "@/lib/types";
 import {
   CreateProjectSchema,
@@ -39,6 +46,70 @@ describe("crypto helpers", () => {
     const token = signToken("workspace:9999999999999", secret);
     expect(verifySignedToken(token, secret)).toBe("workspace:9999999999999");
     expect(verifySignedToken(`${token}tampered`, secret)).toBeNull();
+  });
+});
+
+describe("workspace username/password authentication", () => {
+  const savedEnv = {
+    APP_USERNAME: process.env.APP_USERNAME,
+    APP_PASSWORD: process.env.APP_PASSWORD,
+    APP_ACCESS_PIN: process.env.APP_ACCESS_PIN,
+    APP_AUTH_DISABLED: process.env.APP_AUTH_DISABLED,
+    MLTRAIN_SESSION_SECRET: process.env.MLTRAIN_SESSION_SECRET,
+  };
+
+  afterEach(() => {
+    for (const [key, val] of Object.entries(savedEnv)) {
+      if (val === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = val;
+      }
+    }
+  });
+
+  it("fails closed when APP_USERNAME and APP_PASSWORD are missing", () => {
+    delete process.env.APP_USERNAME;
+    delete process.env.APP_PASSWORD;
+    delete process.env.APP_ACCESS_PIN;
+    delete process.env.APP_AUTH_DISABLED;
+
+    const cfg = getAuthConfig();
+    expect(cfg.authRequired).toBe(true);
+    expect(cfg.configured).toBe(false);
+    expect(verifyWorkspaceCredentials("admin", "secret")).toBe(false);
+    expect(isSessionTokenValid("anything")).toBe(false);
+  });
+
+  it("verifies APP_USERNAME and APP_PASSWORD and invalidates sessions on password rotation", () => {
+    process.env.APP_USERNAME = "alice";
+    process.env.APP_PASSWORD = "s3cur3-password!";
+    process.env.MLTRAIN_SESSION_SECRET = "0123456789abcdef0123456789abcdef";
+    delete process.env.APP_AUTH_DISABLED;
+
+    expect(verifyWorkspaceCredentials("alice", "s3cur3-password!")).toBe(true);
+    expect(verifyWorkspaceCredentials(" alice ", "s3cur3-password!")).toBe(true);
+    expect(verifyWorkspaceCredentials("alice", "wrong-password")).toBe(false);
+    expect(verifyWorkspaceCredentials("bob", "s3cur3-password!")).toBe(false);
+
+    const cookieVal = createSessionCookieValue("alice");
+    expect(isSessionTokenValid(cookieVal)).toBe(true);
+    expect(parseSessionToken(cookieVal)?.username).toBe("alice");
+
+    // Rotating password in Vercel env must immediately invalidate existing cookies
+    process.env.APP_PASSWORD = "rotated-password!";
+    expect(isSessionTokenValid(cookieVal)).toBe(false);
+    expect(parseSessionToken(cookieVal)).toBeNull();
+  });
+
+  it("supports optional APP_AUTH_DISABLED=true override for local development", () => {
+    delete process.env.APP_USERNAME;
+    delete process.env.APP_PASSWORD;
+    process.env.APP_AUTH_DISABLED = "true";
+
+    expect(getAuthConfig().authRequired).toBe(false);
+    expect(verifyWorkspaceCredentials("", "")).toBe(true);
+    expect(isSessionTokenValid(undefined)).toBe(true);
   });
 });
 

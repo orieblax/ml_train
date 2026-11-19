@@ -141,10 +141,11 @@ MLTRAIN_TRAINER_LAMBDA_ARN=arn:aws:lambda:us-east-1:123456789012:function:mltrai
 MLTRAIN_ML_LAYER_ARN=arn:aws:lambda:us-east-1:123456789012:layer:mltrain-prod-ml-runtime:1
 MLTRAIN_INFERENCE_ROLE_ARN=arn:aws:iam::123456789012:role/mltrain-prod-inference-role-us-east-1
 MLTRAIN_SESSION_SECRET=<64-hex-char-secret-printed-by-script>
-APP_ACCESS_PIN=<optional-passcode-to-gate-studio-access>
+APP_USERNAME=admin
+APP_PASSWORD=<your-strong-login-password>
 ```
 
-> **Security Tip**: Set `APP_ACCESS_PIN` before deploying to Vercel if your Vercel URL is public so only people with your workspace PIN can upload documents, trigger training, or deploy Lambdas.
+> **Login Screen Credentials**: Set both `APP_USERNAME` and `APP_PASSWORD` in **Vercel → Project Settings → Environment Variables** (and `.env.local` locally). All Studio pages and API routes require signing in with these credentials; rotating either variable in Vercel immediately invalidates old sessions.
 
 ---
 
@@ -156,7 +157,7 @@ Start the Next.js development server on your PC:
 npm run dev
 ```
 
-1. Open `http://localhost:3000/settings` and verify all four live checks pass:
+1. Open `http://localhost:3000/`, sign in with your `APP_USERNAME` and `APP_PASSWORD`, then open `/settings` and verify all four live checks pass:
    - **S3 Bucket**: Connected
    - **DynamoDB Table**: `ACTIVE`
    - **Trainer Lambda**: `Active (python3.12, 1024 MB)`
@@ -169,9 +170,9 @@ npm run dev
 
 1. Go to [vercel.com/new](https://vercel.com/new) and import **`orieblax/ml_train`**.
 2. Keep the default **Next.js** preset and Root Directory (`./`).
-3. Under **Environment Variables**, paste every variable from `.env.local` (`AWS_REGION` through `APP_ACCESS_PIN`).
+3. Under **Environment Variables**, paste every variable from `.env.local` (`AWS_REGION` through `APP_USERNAME` and `APP_PASSWORD`).
 4. Click **Deploy**.
-5. Once live, open `https://<your-vercel-domain>/settings` and click **Run Checks** to confirm production connectivity.
+5. Once live, open `https://<your-vercel-domain>/`, sign in with `APP_USERNAME` and `APP_PASSWORD`, and visit `/settings` to click **Run Checks** and confirm production connectivity.
 
 ---
 
